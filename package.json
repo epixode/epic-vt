@@ -1,6 +1,6 @@
 {
   "name": "epic-vt",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A vt100 terminal buffer engine using persistent (non-destructively updated) storage.",
   "main": "lib/index.js",
   "scripts": {
