@@ -1,0 +1,30 @@
+{
+  "name": "epic-vt",
+  "version": "0.0.1",
+  "description": "A vt100 terminal buffer engine using persistent (non-destructively updated) storage.",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "babel src --out-dir lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/epixode/epic-vt.git"
+  },
+  "keywords": [
+    "terminal",
+    "vt100",
+    "persistent"
+  ],
+  "author": "Sébastien Carlier <s.carlier@epixode.fr>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/epixode/epic-vt/issues"
+  },
+  "homepage": "https://github.com/epixode/epic-vt#readme",
+  "devDependencies": {
+    "babel-cli": "^6.4.5",
+    "babel-plugin-transform-object-rest-spread": "^6.1.18",
+    "babel-preset-es2015": "^6.3.13"
+  }
+}
