@@ -5,9 +5,9 @@ export const TermBuffer = function (options) {
   options = options || {};
   this.width = options.width || 80;
   this.height = options.lines || 24;
-  this.lines = Array(this.height).fill([]);
   this.cursor = {line: 0, column: 0};
   this.attrs = {};
+  this.lines = Array(this.height).fill(Array(this.width).fill({char: ' ', attrs: this.attrs}));
 };
 
 StateThread.enable(TermBuffer, ['lines', 'cursor', 'attrs']);
@@ -43,7 +43,7 @@ TermBuffer.prototype._writeChar = function (char) {
   if (cursor.column >= this.width)
     this._newline();
   const line = this._lines._(cursor.line);
-  line[cursor.column] = {char, this.attrs};
+  line[cursor.column] = {char, attrs: this.attrs};
 
 };
 
@@ -54,9 +54,10 @@ TermBuffer.prototype._newline = function () {
   cursor.column = 0;
   // Scroll by one line if needed.
   if (cursor.line > this.height) {
-    this._lines.splice(0, 1);
+    const lines = this._lines;
+    lines.splice(0, 1);
+    lines.push(Array(this.width).fill({char: ' ', attrs: this.attrs}));
   }
-  // TODO: initialize the new line if needed
 };
 
 export default TermBuffer;
