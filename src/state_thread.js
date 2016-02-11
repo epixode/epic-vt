@@ -7,28 +7,27 @@ export const StateThread = function () {
   const forUpdate = function (obj) {
 
     // If we already own obj or a copy of it, return the value we own.
-    if (this.map.has(obj))
-      return this.map.get(obj);
+    if (map.has(obj))
+      return map.get(obj);
 
     // Make an updatable copy of an object or array.
     if (typeof obj === 'object') {
       let mine;
       if (Array.isArray(obj)) {
         mine = obj.slice();
-        mine._ = getter;
+        mine._ = _getter;
       } else {
-        if (obj.__state_thread_enabled) {
-          mine = setUp(mine, state_thread);
-        } else {
-          mine = Object.create(Object.getPrototypeOf(obj));
-          Object.keys(obj).forEach(function (prop) {
-            mine[prop] = obj.prop;
-          });
+        mine = Object.create(Object.getPrototypeOf(obj));
+        Object.keys(obj).forEach(function (prop) {
+          mine[prop] = obj[prop];
+        });
+        if (obj.__state_thread_enabled)
+          setUp(mine);
+        else
           mine._ = _getter;
-        }
       }
-      this.map.set(obj, mine);
-      this.map.set(mine, mine);
+      map.set(obj, mine);
+      map.set(mine, mine);
       freezeList.push(mine)
       return mine;
     }
@@ -37,7 +36,7 @@ export const StateThread = function () {
       throw 'updatable functions are not supported';
 
     // Other types (string|number|boolean|undefined|symbol) are immutable.
-    throw 'forUpdate called on immutable value';
+    throw ('forUpdate called on immutable value ' + obj);
   };
 
   const freeze = function () {
@@ -52,19 +51,13 @@ export const StateThread = function () {
   };
 
   const setUp = function (obj) {
-    const that = forUpdate(obj);
-    that.__thread = state_thread;
-    that.__original = obj;
-    that.__changed = false;
-    return that;
+    obj.__thread = state_thread;
+    obj.__changed = false;
   };
 
   const tearDown = function (obj, nested) {
-    const result = (nested || obj.__changed) ? obj : obj.__original;
     delete obj.__changed;
-    delete obj.__original;
     delete obj.__thread;
-    return result;
   };
 
   const _getter = function (key) {
@@ -105,9 +98,10 @@ StateThread.enable = function (constr, props) {
 StateThread.run = function (func) {
   return function () {
     const thread = StateThread();
-    const that = thread.setUp(this);
+    const that = thread.forUpdate(this);
     func.apply(that, arguments);
-    const result = thread.tearDown(that);
+    const result = that.__changed ? that : this;
+    thread.tearDown(that);
     thread.freeze();
     return result;
   };

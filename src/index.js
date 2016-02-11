@@ -39,11 +39,11 @@ TermBuffer.prototype._writeChar = function (char) {
   // Write the caracter using the current attributes and
   // move the cursor.
   const cursor = this._cursor;
+  const line = this._lines._(cursor.line);
+  line[cursor.column] = {char, attrs: this.attrs};
   cursor.column += 1;
   if (cursor.column >= this.width)
     this._newline();
-  const line = this._lines._(cursor.line);
-  line[cursor.column] = {char, attrs: this.attrs};
 
 };
 
