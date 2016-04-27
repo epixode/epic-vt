@@ -53,10 +53,11 @@ TermBuffer.prototype._newline = function () {
   cursor.line += 1;
   cursor.column = 0;
   // Scroll by one line if needed.
-  if (cursor.line > this.height) {
+  if (cursor.line === this.height) {
     const lines = this._lines;
     lines.splice(0, 1);
     lines.push(Array(this.width).fill({char: ' ', attrs: this.attrs}));
+    cursor.line = this.height - 1;
   }
 };
 
