@@ -1,64 +1,95 @@
 
-import StateThread from './state_thread';
+import Immutable from 'immutable';
+
+/*
+  Line buffering.
+  Input: handle special characters, echo normal characters.
+
+icanon mode:
+  lf     0x0D (^M): insert LF and flush input
+  erase  0x7F (BS): erase character
+  eof    0x04 (^D): flush input
+
+  intr   0x03 (^C): send SIGINT
+  quit   0x1C (^\): send SIGQUIT
+  kill   0x15 (^U): erase line
+  start  0x11 (^Q): XON
+  stop   0x13 (^S): XOFF
+  susp   0x1A (^Z): send SIGTSTP
+  cr     0x0A (^J): insert LF and flush input
+  tab    0x09 (^I): tab
+  lnext  0x16 (^V): literal next
+  werase 0x17 (^W): erase word
+  rprnt  ^R ???
+  flush  ^O ???
+
+*/
 
 export const TermBuffer = function (options) {
   options = options || {};
-  this.width = options.width || 80;
-  this.height = options.lines || 24;
-  this.cursor = {line: 0, column: 0};
-  this.attrs = {};
-  this.lines = Array(this.height).fill(Array(this.width).fill({char: ' ', attrs: this.attrs}));
+  const width = options.width || 80;
+  const height = options.lines || 24;
+  const cursor = Immutable.Map({line: 0, column: 0});
+  const attrs = Immutable.Map();
+  const blankCell = Immutable.Map({char: ' ', attrs});
+  const blankLine = Immutable.List(Array(width).fill(blankCell));
+  const lines = Immutable.List(Array(height).fill(blankLine));
+  return Immutable.Map({width, height, cursor, attrs, lines});
 };
 
-StateThread.enable(TermBuffer, ['lines', 'cursor', 'attrs']);
-
-TermBuffer.prototype.write = StateThread.run(function (str) {
-  this._write(str);
-});
-
-TermBuffer.prototype._write = function (str) {
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charAt(i);
-    this._writeChar(str.charAt(i));
+export const writeString = function (buffer, str) {
+  for (let i = 0; i < str.length; i += 1) {
+    buffer = writeChar(buffer, str[i]);
   }
+  return buffer;
 };
 
-TermBuffer.prototype._writeChar = function (char) {
+export const writeChar = function (buffer, char) {
 
   if (char === '\n') {
-    this._newline();
-    return;
+    return writeNewline(buffer);
   }
 
   if (char === '\r') {
     // Move the cursor to the beginning of the current line.
-    this._cursor.column = 0;
-    return;
+    return buffer.setIn(['cursor', 'column'], 0);
   }
 
   // Write the caracter using the current attributes and
   // move the cursor.
-  const cursor = this._cursor;
-  const line = this._lines._(cursor.line);
-  line[cursor.column] = {char, attrs: this.attrs};
-  cursor.column += 1;
-  if (cursor.column >= this.width)
-    this._newline();
+  let cursor = buffer.get('cursor');
+  const line = cursor.get('line');
+  let column = cursor.get('column');
+  const attrs = buffer.get('attrs');
+  const cell = Immutable.Map({char, attrs});
+  buffer = buffer.setIn(['lines', line, column], cell);
 
+  column += 1;
+  if (column < buffer.get('width')) {
+    cursor = cursor.set('column', column);
+    return buffer.set('cursor', cursor);
+  }
+
+  return writeNewline(buffer);
 };
 
-TermBuffer.prototype._newline = function () {
+export const writeNewline = function (buffer) {
   // Move the cursor to the beginning of the next line.
-  const cursor = this._cursor;
-  cursor.line += 1;
-  cursor.column = 0;
+  const height = buffer.get('height');
+  let cursor = buffer.get('cursor').set('column', 0);
+  let line = cursor.get('line') + 1;
   // Scroll by one line if needed.
-  if (cursor.line === this.height) {
-    const lines = this._lines;
-    lines.splice(0, 1);
-    lines.push(Array(this.width).fill({char: ' ', attrs: this.attrs}));
-    cursor.line = this.height - 1;
+  if (line === height) {
+    const width = buffer.get('width');
+    const attrs = buffer.get('attrs');
+    const blankCell = Immutable.Map({char: ' ', attrs});
+    const blankLine = Immutable.List(Array(this.width).fill(blankCell));
+    buffer = buffer.update('lines', lines => lines.shift().push(blankLine));
+    line = height - 1;
   }
+  cursor = cursor.set('line', line);
+  buffer = buffer.set('cursor', cursor);
+  return buffer;
 };
 
 export default TermBuffer;
